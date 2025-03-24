@@ -1,32 +1,89 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>All Tasks</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th>Assigned To</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for task in tasks %}
-        <tr>
-            <td>{{ task.title }}</td>
-            <td>{{ task.description }}</td>
-            <td>{{ task.due_date }}</td>
-            <td>{{ task.status }}</td>
-            <td>{{ task.assigned_to }}</td>
-            <td>
-                <a href="{{ url_for('edit_task', id=task.id) }}">Edit</a>
-                <a href="{{ url_for('delete_task', id=task.id) }}" onclick="return confirm('Are you sure?')">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="board">
+    <div class="board-header">
+        <h2>My Task Board</h2>
+        <button id="add-task-btn" class="btn">+ Add Task</button>
+    </div>
+
+    <div class="columns">
+        <!-- To Do Column -->
+        <div class="column" data-status="todo">
+            <div class="column-header">
+                <h3>To Do</h3>
+                <span class="task-count">{{ todo|length }}</span>
+            </div>
+            <div class="tasks" id="todo-tasks">
+                {% for task in todo %}
+                <div class="task-card" draggable="true" data-task-id="{{ task.id }}">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-due">Due: {{ task.due_date }}</div>
+                    <div class="task-description">{{ task.description }}</div>
+                    <button class="delete-task" data-task-id="{{ task.id }}">×</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="column" data-status="in_progress">
+            <div class="column-header">
+                <h3>In Progress</h3>
+                <span class="task-count">{{ in_progress|length }}</span>
+            </div>
+            <div class="tasks" id="in-progress-tasks">
+                {% for task in in_progress %}
+                <div class="task-card" draggable="true" data-task-id="{{ task.id }}">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-due">Due: {{ task.due_date }}</div>
+                    <div class="task-description">{{ task.description }}</div>
+                    <button class="delete-task" data-task-id="{{ task.id }}">×</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Done Column -->
+        <div class="column" data-status="done">
+            <div class="column-header">
+                <h3>Done</h3>
+                <span class="task-count">{{ done|length }}</span>
+            </div>
+            <div class="tasks" id="done-tasks">
+                {% for task in done %}
+                <div class="task-card" draggable="true" data-task-id="{{ task.id }}">
+                    <div class="task-title">{{ task.title }}</div>
+                    <div class="task-due">Due: {{ task.due_date }}</div>
+                    <div class="task-description">{{ task.description }}</div>
+                    <button class="delete-task" data-task-id="{{ task.id }}">×</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div id="task-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Add New Task</h3>
+        <form id="task-form">
+            <div class="form-group">
+                <label for="title">Title*</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="due_date">Due Date*</label>
+                <input type="date" id="due_date" name="due_date" required>
+            </div>
+            <button type="submit" class="btn">Add Task</button>
+        </form>
+    </div>
+</div>
 {% endblock %}

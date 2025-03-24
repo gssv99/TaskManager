@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import json
 import os
 
@@ -8,7 +8,11 @@ TASKS_FILE = 'tasks.json'
 
 def load_tasks():
     if not os.path.exists(TASKS_FILE):
-        return []
+        return {
+            'todo': [],
+            'in_progress': [],
+            'done': []
+        }
     with open(TASKS_FILE, 'r') as f:
         return json.load(f)
 
@@ -19,66 +23,49 @@ def save_tasks(tasks):
 @app.route('/')
 def index():
     tasks = load_tasks()
-    return render_template('index.html', tasks=tasks)
+    return render_template('index.html', *tasks)
 
-@app.route('/add', methods=['GET', 'POST'])
+@app.route('/add_task', methods=['POST'])
 def add_task():
-    if request.method == 'POST':
-        tasks = load_tasks()
-        new_task = {
-            'id': len(tasks) + 1,
-            'title': request.form['title'],
-            'description': request.form['description'],
-            'due_date': request.form['due_date'],
-            'status': 'To Do'
-        }
-        tasks.append(new_task)
-        save_tasks(tasks)
-        flash('Task added successfully!', 'success')
-        return redirect(url_for('index'))
-    return render_template('add_task.html')
-
-@app.route('/edit/<int:task_id>', methods=['GET', 'POST'])
-def edit_task(task_id):
     tasks = load_tasks()
-    task = next((t for t in tasks if t['id'] == task_id), None)
-    
-    if not task:
-        flash('Task not found!', 'error')
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        task['title'] = request.form['title']
-        task['description'] = request.form['description']
-        task['due_date'] = request.form['due_date']
-        task['status'] = request.form['status']
-        save_tasks(tasks)
-        flash('Task updated successfully!', 'success')
-        return redirect(url_for('index'))
-    
-    return render_template('edit_task.html', task=task)
-
-@app.route('/delete/<int:task_id>')
-def delete_task(task_id):
-    tasks = load_tasks()
-    tasks = [t for t in tasks if t['id'] != task_id]
+    new_task = {
+        'id': len(tasks['todo']) + len(tasks['in_progress']) + len(tasks['done']) + 1,
+        'title': request.form['title'],
+        'description': request.form['description'],
+        'due_date': request.form['due_date']
+    }
+    tasks['todo'].append(new_task)
     save_tasks(tasks)
-    flash('Task deleted successfully!', 'success')
-    return redirect(url_for('index'))
+    return jsonify(success=True, task=new_task)  # Must return JSON
 
-@app.route('/status/<int:task_id>/<new_status>')
-def update_status(task_id, new_status):
+@app.route('/update_task', methods=['POST'])
+def update_task():
     tasks = load_tasks()
-    task = next((t for t in tasks if t['id'] == task_id), None)
+    task_id = int(request.form['task_id'])
+    new_status = request.form['new_status']
+    
+    # Find and remove task from any column
+    task = None
+    for status in ['todo', 'in_progress', 'done']:
+        for idx, t in enumerate(tasks[status]):
+            if t['id'] == task_id:
+                task = tasks[status].pop(idx)
+                break
+        if task:
+            break
     
     if task:
-        task['status'] = new_status
+        tasks[new_status].append(task)
         save_tasks(tasks)
-        flash('Status updated!', 'success')
+        return jsonify(success=True)
     
-    return redirect(url_for('index'))
+    return jsonify(success=False), 404
 
 if __name__ == '__main__':
     if not os.path.exists(TASKS_FILE):
-        save_tasks([])
+        save_tasks({
+            'todo': [],
+            'in_progress': [],
+            'done': []
+        })
     app.run(debug=True)
