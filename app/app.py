@@ -1,92 +1,84 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import sqlite3
+import json
+import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = 'your_secret_key_here'
+TASKS_FILE = 'tasks.json'
 
-# Database setup
-def get_db_connection():
-    conn = sqlite3.connect('tasks.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+def load_tasks():
+    if not os.path.exists(TASKS_FILE):
+        return []
+    with open(TASKS_FILE, 'r') as f:
+        return json.load(f)
 
-def init_db():
-    conn = get_db_connection()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT,
-            due_date TEXT,
-            status TEXT DEFAULT 'To Do',
-            assigned_to TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+def save_tasks(tasks):
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(tasks, f)
 
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    tasks = conn.execute('SELECT * FROM tasks').fetchall()
-    conn.close()
+    tasks = load_tasks()
     return render_template('index.html', tasks=tasks)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_task():
     if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        due_date = request.form['due_date']
-        assigned_to = request.form['assigned_to']
-
-        conn = get_db_connection()
-        conn.execute('INSERT INTO tasks (title, description, due_date, assigned_to) VALUES (?, ?, ?, ?)',
-                     (title, description, due_date, assigned_to))
-        conn.commit()
-        conn.close()
+        tasks = load_tasks()
+        new_task = {
+            'id': len(tasks) + 1,
+            'title': request.form['title'],
+            'description': request.form['description'],
+            'due_date': request.form['due_date'],
+            'status': 'To Do'
+        }
+        tasks.append(new_task)
+        save_tasks(tasks)
         flash('Task added successfully!', 'success')
         return redirect(url_for('index'))
     return render_template('add_task.html')
 
-@app.route('/edit/<int:id>', methods=['GET', 'POST'])
-def edit_task(id):
-    conn = get_db_connection()
-    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (id,)).fetchone()
+@app.route('/edit/<int:task_id>', methods=['GET', 'POST'])
+def edit_task(task_id):
+    tasks = load_tasks()
+    task = next((t for t in tasks if t['id'] == task_id), None)
+    
+    if not task:
+        flash('Task not found!', 'error')
+        return redirect(url_for('index'))
+    
     if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        due_date = request.form['due_date']
-        status = request.form['status']
-        assigned_to = request.form['assigned_to']
-
-        conn.execute('UPDATE tasks SET title = ?, description = ?, due_date = ?, status = ?, assigned_to = ? WHERE id = ?',
-                     (title, description, due_date, status, assigned_to, id))
-        conn.commit()
-        conn.close()
+        task['title'] = request.form['title']
+        task['description'] = request.form['description']
+        task['due_date'] = request.form['due_date']
+        task['status'] = request.form['status']
+        save_tasks(tasks)
         flash('Task updated successfully!', 'success')
         return redirect(url_for('index'))
-    conn.close()
+    
     return render_template('edit_task.html', task=task)
 
-@app.route('/delete/<int:id>')
-def delete_task(id):
-    conn = get_db_connection()
-    conn.execute('DELETE FROM tasks WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
+@app.route('/delete/<int:task_id>')
+def delete_task(task_id):
+    tasks = load_tasks()
+    tasks = [t for t in tasks if t['id'] != task_id]
+    save_tasks(tasks)
     flash('Task deleted successfully!', 'success')
     return redirect(url_for('index'))
 
-@app.route('/collaborate')
-def collaborate():
-    conn = get_db_connection()
-    tasks = conn.execute('SELECT * FROM tasks').fetchall()
-    conn.close()
-    return render_template('collaborate.html', tasks=tasks)
-
-
+@app.route('/status/<int:task_id>/<new_status>')
+def update_status(task_id, new_status):
+    tasks = load_tasks()
+    task = next((t for t in tasks if t['id'] == task_id), None)
+    
+    if task:
+        task['status'] = new_status
+        save_tasks(tasks)
+        flash('Status updated!', 'success')
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    init_db()
+    if not os.path.exists(TASKS_FILE):
+        save_tasks([])
     app.run(debug=True)
