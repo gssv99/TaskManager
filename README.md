@@ -1,6 +1,6 @@
 # Task Manager (Trello-like)
 
-![Task Manager Screenshot](static/screenshot.png) 
+
 
 A lightweight, Trello-inspired task management web application built with Python/Flask and vanilla JavaScript. Features drag-and-drop functionality between task status columns.
 
