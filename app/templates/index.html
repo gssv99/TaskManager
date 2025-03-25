@@ -16,7 +16,7 @@
             </div>
             <div class="tasks" id="todo-tasks">
                 {% for task in todo %}
-                <div class="task-card" draggable="true" data-task-id="{{ task.id }}">
+                <div class="task-card" draggable="true" data-task-id="{{ task.id }}" data-status="todo">
                     <div class="task-title">{{ task.title }}</div>
                     <div class="task-due">Due: {{ task.due_date }}</div>
                     <div class="task-description">{{ task.description }}</div>
@@ -34,7 +34,7 @@
             </div>
             <div class="tasks" id="in-progress-tasks">
                 {% for task in in_progress %}
-                <div class="task-card" draggable="true" data-task-id="{{ task.id }}">
+                <div class="task-card" draggable="true" data-task-id="{{ task.id }}"  data-status="in_progress">
                     <div class="task-title">{{ task.title }}</div>
                     <div class="task-due">Due: {{ task.due_date }}</div>
                     <div class="task-description">{{ task.description }}</div>
@@ -52,7 +52,7 @@
             </div>
             <div class="tasks" id="done-tasks">
                 {% for task in done %}
-                <div class="task-card" draggable="true" data-task-id="{{ task.id }}">
+                <div class="task-card" draggable="true" data-task-id="{{ task.id }}"  data-status="done">
                     <div class="task-title">{{ task.title }}</div>
                     <div class="task-due">Due: {{ task.due_date }}</div>
                     <div class="task-description">{{ task.description }}</div>

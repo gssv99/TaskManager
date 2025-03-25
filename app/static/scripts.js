@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault(); // Critical: Prevent default form submission
         
         const formData = new FormData(this);
-        
         try {
             const response = await fetch('/add_task', {
                 method: 'POST',
@@ -33,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.success) {
                 const todoColumn = document.getElementById('todo-tasks');
-                const newTask = createTaskElement(data.task);
+                const newTask = createTaskElement(data.task, 'todo');
                 todoColumn.appendChild(newTask);
                 updateTaskCount('todo');
                 modal.style.display = 'none';
@@ -44,23 +43,44 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Failed to add task. Check console for details.');
         }
     });   
-    // Delete Task
-    document.addEventListener('click', function(e) {
+    // Replace your current delete event listener with this:
+    document.addEventListener('click', async function(e) {
         if (e.target.classList.contains('delete-task')) {
             if (confirm('Are you sure you want to delete this task?')) {
-                const taskId = e.target.dataset.taskId;
+                const status = e.target.dataset.status
+                const taskId = parseInt(e.target.dataset.taskId);
                 const taskCard = e.target.closest('.task-card');
-                
-                fetch(`/delete_task/${taskId}`, {
-                    method: 'POST'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        const column = taskCard.closest('.column');
+                console.log('dataset',e.target.dataset)
+                console.log('taskCard',taskCard)
+                try {
+                    const response = await fetch('/delete_task', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ task_id: taskId })
+                    });
+                    
+                    const data = await response.json();
+                    console.log('data', data)
+                    if (data.success) {
+                        
+                        // Remove task from UI
                         taskCard.remove();
-                        updateTaskCount(column.dataset.status);
+                        
+                        // Update task count
+                        updateTaskCount(data.collumn);
+                        
+                     
+                        
+                       
+                    } else {
+                        throw new Error(data.error || 'Failed to delete task');
                     }
-                });
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    alert(`Delete failed: ${error.message}`);
+                }
             }
         }
     });
@@ -104,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function drop() {
         this.classList.remove('drop-target');
-        
+        console.log(draggedTask)
         if (draggedTask) {
             const newStatus = this.dataset.status;
             const taskId = draggedTask.dataset.taskId;
@@ -127,7 +147,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Update task counts
                     updateTaskCount(newStatus);
                     const oldColumn = document.querySelector(`.column[data-status="${draggedTask.dataset.status}"]`);
-                    if (oldColumn) updateTaskCount(oldColumn.dataset.status);
+                    if (oldColumn) updateTaskCount(draggedTask.dataset.status);
+                    console.log('draggedTask.dataset.status', draggedTask.dataset.status)
                     
                     // Update task's data-status
                     draggedTask.dataset.status = newStatus;
@@ -137,11 +158,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Helper Functions
-    function createTaskElement(task) {
+    function createTaskElement(task, status) {
         const taskCard = document.createElement('div');
         taskCard.className = 'task-card';
         taskCard.draggable = true;
         taskCard.dataset.taskId = task.id;
+        taskCard.dataset.status = status
         taskCard.innerHTML = `
             <div class="task-title">${task.title}</div>
             <div class="task-due">Due: ${task.due_date}</div>
